@@ -54,13 +54,13 @@ public class DebugTraceModule extends HttpSupported implements Module {
                 .onWatch(new AdviceListener() {
 
                     private String getTracingTitle(final Advice advice) {
-                        return "Tracing for : "
-                                + advice.getBehavior().getDeclaringClass().getName()
-                                + "."
-                                + advice.getBehavior().getName()
-                                + " by "
-                                + Thread.currentThread().getName()
-                                ;
+                        StringBuilder sb = new StringBuilder("Tracing for : ");
+                        sb.append(advice.getBehavior().getDeclaringClass().getName())
+                                .append(".")
+                                .append(advice.getBehavior().getName())
+                                .append(" by ").append(Thread.currentThread().getName());
+
+                        return sb.toString();
                     }
 
                     private String getEnterTitle(final Advice advice) {
@@ -74,6 +74,7 @@ public class DebugTraceModule extends HttpSupported implements Module {
 
                     @Override
                     protected void before(Advice advice) throws Throwable {
+                        // 调用链路记录
                         final TTree tTree;
                         if (advice.isProcessTop()) {
                             advice.attach(tTree = new TTree(true, getTracingTitle(advice)));
