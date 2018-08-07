@@ -72,6 +72,8 @@ public class AgentLauncher {
         return sandboxHome + File.separatorChar + "provider";
     }
 
+    //
+    private static final String SANDBOX_HOME = File.separator + "data" + File.separator + "appdatas"+ File.separator + "sandbox";
 
     // sandbox默认主目录
     private static final String DEFAULT_SANDBOX_HOME
@@ -80,8 +82,7 @@ public class AgentLauncher {
             .getParent();
 
     private static final String SANDBOX_USER_MODULE_PATH
-            = System.getProperties().getProperty("user.home")
-            + File.separator + ".sandbox-module";
+            = SANDBOX_HOME + File.separator + "user-module";
 
     // 启动模式: agent方式加载
     private static final String LAUNCH_MODE_AGENT = "agent";
@@ -92,9 +93,8 @@ public class AgentLauncher {
     // 启动默认
     private static String LAUNCH_MODE;
 
-    // agentmain上来的结果输出到文件${HOME}/.sandbox.token
-    private static final String RESULT_FILE_PATH = System.getProperties().getProperty("user.home")
-            + File.separator + ".sandbox.token";
+    // agentmain上来的结果输出到文件/data/appdatas/sandbox/.sandbox.token
+    private static final String RESULT_FILE_PATH = SANDBOX_HOME + File.separator + ".sandbox.token";
 
     // 全局持有ClassLoader用于隔离sandbox实现
     private static volatile Map<String/*NAMESPACE*/, SandboxClassLoader> sandboxClassLoaderMap

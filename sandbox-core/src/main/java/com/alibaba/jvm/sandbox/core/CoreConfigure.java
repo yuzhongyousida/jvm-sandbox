@@ -151,7 +151,7 @@ public class CoreConfigure {
         if (ArrayUtils.isEmpty(pathArray)) {
             return pathArray;
         }
-        final String SYS_PROP_USER_HOME = System.getProperty("user.home");
+        final String SYS_PROP_USER_HOME = File.separator + "data" + File.separator + "appdatas" + "sandbox";
         for (int index = 0; index < pathArray.length; index++) {
             if (StringUtils.startsWith(pathArray[index], "~")) {
                 pathArray[index] = StringUtils.replaceOnce(pathArray[index], "~", SYS_PROP_USER_HOME);

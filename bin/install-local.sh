@@ -5,9 +5,6 @@
 #    date : 2017-01-01
 # version : 0.0.0.1
 
-typeset SANDBOX_INSTALL_PREFIX
-typeset DEFAULT_SANDBOX_INSTALL_PREFIX="${HOME}/.opt"
-
 # exit shell with err_code
 # $1 : err_code
 # $2 : err_msg
@@ -17,48 +14,16 @@ exit_on_err()
     exit ${1}
 }
 
-# display usage
-function usage() {
-echo "
-usage: ${0} [h] [l:]
-
-    -h : help
-         Prints the ${0} help
-
-    -p : install local path
-         Install local path in this compute. Default install local PATH=${DEFAULT_SANDBOX_INSTALL_PREFIX}
-
-"
-}
 
 # the sandbox main function
 function main() {
-
-    while getopts "hp:" ARG
-    do
-        case ${ARG} in
-            h)
-                usage
-                exit
-            ;;
-            p)
-                SANDBOX_INSTALL_PREFIX=${OPTARG}
-            ;;
-        esac
-    done
-
-
-    # if not appoint the install local, default is ${HOME}/.opt
-    if [[ -z ${SANDBOX_INSTALL_PREFIX} ]]; then
-        SANDBOX_INSTALL_PREFIX=${DEFAULT_SANDBOX_INSTALL_PREFIX}
-    fi
 
     # check permission
     # [[ ! -w ${SANDBOX_INSTALL_PREFIX} ]] \
     #    && exit_on_err 1 "permission denied, ${SANDBOX_INSTALL_PREFIX} is not writable."
 
 
-    local SANDBOX_INSTALL_LOCAL=${SANDBOX_INSTALL_PREFIX}/sandbox
+    local SANDBOX_INSTALL_LOCAL="/data/appdatas/sandbox"
 
     # clean if existed
     [ -w ${SANDBOX_INSTALL_LOCAL} ] \
@@ -73,6 +38,7 @@ function main() {
         && cp -r ./lib ${SANDBOX_INSTALL_LOCAL}/ \
         && cp -r ./module ${SANDBOX_INSTALL_LOCAL}/ \
         && cp -r ./provider ${SANDBOX_INSTALL_LOCAL}/ \
+        && cp -r ./user-module ${SANDBOX_INSTALL_LOCAL}/ \
         && mkdir -p ${SANDBOX_INSTALL_LOCAL}/bin \
         || exit_on_err 1 "permission denied, copy file failed."
 

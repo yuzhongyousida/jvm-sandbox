@@ -18,7 +18,7 @@ typeset SANDBOX_SERVER_NETWORK
 typeset SANDBOX_LIB_DIR=${SANDBOX_HOME_DIR}/lib
 
 # define sandbox attach token file
-typeset SANDBOX_TOKEN_FILE=${HOME}/.sandbox.token
+typeset SANDBOX_TOKEN_FILE=/data/appdatas/sandbox/.sandbox.token
 
 # define JVM OPS
 typeset SANDBOX_JVM_OPS="-Xms128M -Xmx128M -Xnoclassgc -ea";
@@ -211,6 +211,8 @@ function attach_jvm() {
     # got an token
     local token=`date |head|cksum|sed 's/ //g'`
 
+    echo "${token}"
+
     # attach target jvm
     "${JAVA_HOME}"/bin/java \
         "${BOOT_CLASSPATH}" \
@@ -220,6 +222,8 @@ function attach_jvm() {
         "${SANDBOX_LIB_DIR}/sandbox-agent.jar" \
         "home=${SANDBOX_HOME_DIR};token=${token};ip=${TARGET_SERVER_IP};port=${TARGET_SERVER_PORT};namespace=${TARGET_NAMESPACE}" \
     || exit_on_err 1 "attach JVM ${TARGET_JVM_PID} fail."
+
+    echo "home=${SANDBOX_HOME_DIR};token=${token};ip=${TARGET_SERVER_IP};port=${TARGET_SERVER_PORT};namespace=${TARGET_NAMESPACE}"
 
     # get network from attach result
     SANDBOX_SERVER_NETWORK=$(grep ${token} ${SANDBOX_TOKEN_FILE}|grep ${TARGET_NAMESPACE}|tail -1|awk -F ";" '{print $3";"$4}');
