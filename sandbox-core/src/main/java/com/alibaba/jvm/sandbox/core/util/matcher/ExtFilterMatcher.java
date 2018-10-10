@@ -32,6 +32,7 @@ public class ExtFilterMatcher implements Matcher {
     private Collection<ClassStructure> getWaitingMatchClassStructures(final ClassStructure classStructure) {
         final Collection<ClassStructure> waitingMatchClassStructures = new ArrayList<ClassStructure>();
         waitingMatchClassStructures.add(classStructure);
+
         if (extFilter.isIncludeSubClasses()) {
             waitingMatchClassStructures.addAll(classStructure.getFamilyTypeClassStructures());
         }

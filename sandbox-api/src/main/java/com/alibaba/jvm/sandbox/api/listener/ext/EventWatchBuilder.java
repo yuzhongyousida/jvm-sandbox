@@ -151,13 +151,31 @@ public class EventWatchBuilder {
      * 构建方法匹配器
      */
     public interface IBuildingForBehavior {
-
+        /**
+         * 方法修饰匹配
+         * @param access
+         * @return
+         */
         IBuildingForBehavior withAccess(int access);
 
+        /**
+         * 方法空入参匹配
+         * @return
+         */
         IBuildingForBehavior withEmptyParameterTypes();
 
+        /**
+         * 方法入参全为String类型匹配
+         * @param patterns
+         * @return
+         */
         IBuildingForBehavior withParameterTypes(String... patterns);
 
+        /**
+         * 方法入参类型匹配
+         * @param classes
+         * @return
+         */
         IBuildingForBehavior withParameterTypes(Class<?>... classes);
 
         IBuildingForBehavior hasExceptionTypes(String... patterns);
@@ -168,6 +186,11 @@ public class EventWatchBuilder {
 
         IBuildingForBehavior hasAnnotationTypes(Class<?>... classes);
 
+        /**
+         * 方法构建行为匹配
+         * @param pattern
+         * @return
+         */
         IBuildingForBehavior onBehavior(String pattern);
 
         IBuildingForClass onClass(String pattern);
@@ -563,10 +586,28 @@ public class EventWatchBuilder {
 
     }
 
+    /**
+     * 封装EventWatchCondition
+     * @return
+     */
     private EventWatchCondition toEventWatchCondition() {
         final List<Filter> filters = new ArrayList<Filter>();
+
+        // 类匹配器循环
         for (final BuildingForClass bfClass : bfClasses) {
+
+            // 类匹配下的filter生成
             final Filter filter = new Filter() {
+
+                /**
+                 * 是否有匹配类
+                 * @param access                           access flag
+                 * @param javaClassName                    类名(全路径名称)
+                 * @param superClassTypeJavaClassName      父类(全路径名称)
+                 * @param interfaceTypeJavaClassNameArray  接口类型名称数组
+                 * @param annotationTypeJavaClassNameArray 标注原数据类型名称数组（注意，此参数尚未支持，只是预留一个API占位）
+                 * @return
+                 */
                 @Override
                 public boolean doClassFilter(final int access,
                                              final String javaClassName,
@@ -579,6 +620,15 @@ public class EventWatchBuilder {
                             && bfClass.hasAnnotationTypes.patternHas(annotationTypeJavaClassNameArray);
                 }
 
+                /**
+                 * 是否有匹配方法
+                 * @param access                           access flag
+                 * @param javaMethodName                   方法名称(包括类名称,静态方法名,普通方法名和构造函数)
+                 * @param parameterTypeJavaClassNameArray  参数类型名称数组
+                 * @param throwsTypeJavaClassNameArray     声明异常类型名称数组
+                 * @param annotationTypeJavaClassNameArray 标注原数据类型名称数组（注意，此参数尚未支持，只是预留一个API占位）
+                 * @return
+                 */
                 @Override
                 public boolean doMethodFilter(final int access,
                                               final String javaMethodName,
@@ -606,8 +656,10 @@ public class EventWatchBuilder {
                 }
             };//filter
 
+            // 增强filter，装进list
             filters.add(makeExtFilter(filter, bfClass));
         }
+
         return new EventWatchCondition() {
             @Override
             public Filter[] getOrFilterArray() {
@@ -636,6 +688,7 @@ public class EventWatchBuilder {
                                final Progress progress,
                                final Event.Type... eventTypes) {
 
+        // 生成watchId先
         final int watchId = moduleEventWatcher.watch(
                 toEventWatchCondition(),
                 listener,

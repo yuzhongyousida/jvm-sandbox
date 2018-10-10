@@ -13,6 +13,7 @@ import java.lang.reflect.Method;
  */
 public class Spy {
 
+    /*** 方法事件 ***/
     private static volatile Method ON_BEFORE_METHOD;
     private static volatile Method ON_RETURN_METHOD;
     private static volatile Method ON_THROWS_METHOD;
@@ -20,6 +21,7 @@ public class Spy {
     private static volatile Method ON_CALL_BEFORE_METHOD;
     private static volatile Method ON_CALL_RETURN_METHOD;
     private static volatile Method ON_CALL_THROWS_METHOD;
+
     private static final Class<Spy.Ret> SPY_RET_CLASS = Spy.Ret.class;
 
     /**
@@ -49,9 +51,21 @@ public class Spy {
         Spy.ON_CALL_THROWS_METHOD = ON_CALL_THROWS_METHOD;
     }
 
+    /**
+     * 本地线程装载类
+     */
     private static final SelfCallBarrier selfCallBarrier = new SelfCallBarrier();
 
 
+    /**
+     * 间谍类- on call before
+     * @param lineNumber
+     * @param owner
+     * @param name
+     * @param desc
+     * @param listenerId
+     * @throws Throwable
+     */
     public static void spyMethodOnCallBefore(final int lineNumber,
                                              final String owner,
                                              final String name,
@@ -60,20 +74,49 @@ public class Spy {
         ON_CALL_BEFORE_METHOD.invoke(null, listenerId, lineNumber, owner, name, desc);
     }
 
+    /**
+     * 间谍类- on call return
+     * @param listenerId
+     * @throws Throwable
+     */
     public static void spyMethodOnCallReturn(final int listenerId) throws Throwable {
         ON_CALL_RETURN_METHOD.invoke(null, listenerId);
     }
 
+    /**
+     * 间谍类- on call throws
+     * @param throwException
+     * @param listenerId
+     * @throws Throwable
+     */
     public static void spyMethodOnCallThrows(final String throwException,
                                              final int listenerId) throws Throwable {
         ON_CALL_THROWS_METHOD.invoke(null, listenerId, throwException);
     }
 
+    /**
+     * 间谍类- on line
+     * @param lineNumber
+     * @param listenerId
+     * @throws Throwable
+     */
     public static void spyMethodOnLine(final int lineNumber,
                                        final int listenerId) throws Throwable {
         ON_LINE_METHOD.invoke(null, listenerId, lineNumber);
     }
 
+    /**
+     * 间谍类- on before
+     * @param argumentArray
+     * @param listenerId
+     * @param targetClassLoaderObjectID
+     * @param javaClassName
+     * @param javaMethodName
+     * @param javaMethodDesc
+     * @param target
+     * @return
+     * @throws Throwable
+     */
     public static Ret spyMethodOnBefore(final Object[] argumentArray,
                                         final int listenerId,
                                         final int targetClassLoaderObjectID,
@@ -82,9 +125,13 @@ public class Spy {
                                         final String javaMethodDesc,
                                         final Object target) throws Throwable {
         final Thread thread = Thread.currentThread();
+
+        // 当前线程已经装载进去，则直接返回 Ret.RET_NONE
         if (selfCallBarrier.isEnter(thread)) {
             return Ret.RET_NONE;
         }
+
+        //
         final SelfCallBarrier.Node node = selfCallBarrier.enter(thread);
         try {
             return (Ret) ON_BEFORE_METHOD.invoke(null,
@@ -94,6 +141,13 @@ public class Spy {
         }
     }
 
+    /**
+     * 间谍类-on return
+     * @param object
+     * @param listenerId
+     * @return
+     * @throws Throwable
+     */
     public static Ret spyMethodOnReturn(final Object object,
                                         final int listenerId) throws Throwable {
         final Thread thread = Thread.currentThread();
@@ -108,6 +162,13 @@ public class Spy {
         }
     }
 
+    /**
+     * 间谍类-on throws
+     * @param throwable
+     * @param listenerId
+     * @return
+     * @throws Throwable
+     */
     public static Ret spyMethodOnThrows(final Throwable throwable,
                                         final int listenerId) throws Throwable {
         final Thread thread = Thread.currentThread();
@@ -135,6 +196,7 @@ public class Spy {
          * 返回状态(0:NONE;1:RETURN;2:THROWS)
          */
         public final int state;
+
         /**
          * 应答对象
          */
@@ -165,11 +227,32 @@ public class Spy {
 
     }
 
+
     /**
-     * 本地线程
+     * 本地线程装载类（数据结构和HashMap类似）
      */
     public static class SelfCallBarrier {
+        /**
+         * node数组的最大装载长度
+         */
+        static final int THREAD_LOCAL_ARRAY_LENGTH = 1024;
 
+        /**
+         * 装载本地thread的Node数组
+         */
+        final Node[] nodeArray = new Node[THREAD_LOCAL_ARRAY_LENGTH];
+
+
+        SelfCallBarrier() {
+            // init root node
+            for (int i = 0; i < THREAD_LOCAL_ARRAY_LENGTH; i++) {
+                nodeArray[i] = new Node();
+            }
+        }
+
+        /**
+         * 装载thread的链表节点类
+         */
         public static class Node {
             private final Thread thread;
             private Node pre;
@@ -182,10 +265,12 @@ public class Spy {
             Node(final Thread thread) {
                 this.thread = thread;
             }
-
         }
 
-        // 删除节点
+        /**
+         * 删除节点
+         * @param node
+         */
         void delete(final Node node) {
             node.pre.next = node.next;
             if (null != node.next) {
@@ -195,7 +280,11 @@ public class Spy {
             node.pre = node.next = null;
         }
 
-        // 插入节点
+        /**
+         * 插入节点
+         * @param top
+         * @param node
+         */
         void insert(final Node top, final Node node) {
             if (null != top.next) {
                 top.next.pre = node;
@@ -205,17 +294,11 @@ public class Spy {
             top.next = node;
         }
 
-        static final int THREAD_LOCAL_ARRAY_LENGTH = 1024;
-
-        final Node[] nodeArray = new Node[THREAD_LOCAL_ARRAY_LENGTH];
-
-        SelfCallBarrier() {
-            // init root node
-            for (int i = 0; i < THREAD_LOCAL_ARRAY_LENGTH; i++) {
-                nodeArray[i] = new Node();
-            }
-        }
-
+        /**
+         * 当前node数组中是否已经装载了当前thread
+         * @param thread
+         * @return
+         */
         boolean isEnter(Thread thread) {
             final Node top = nodeArray[thread.hashCode() % THREAD_LOCAL_ARRAY_LENGTH];
             Node node = top;
@@ -230,6 +313,11 @@ public class Spy {
             }//sync
         }
 
+        /**
+         * 当前thread入node 链表
+         * @param thread
+         * @return
+         */
         Node enter(Thread thread) {
             final Node top = nodeArray[thread.hashCode() % THREAD_LOCAL_ARRAY_LENGTH];
             final Node node = new Node(thread);
@@ -239,6 +327,11 @@ public class Spy {
             return node;
         }
 
+        /**
+         * 删除node节点
+         * @param thread
+         * @param node
+         */
         void exit(Thread thread, Node node) {
             final Node top = nodeArray[thread.hashCode() % THREAD_LOCAL_ARRAY_LENGTH];
             synchronized (top) {

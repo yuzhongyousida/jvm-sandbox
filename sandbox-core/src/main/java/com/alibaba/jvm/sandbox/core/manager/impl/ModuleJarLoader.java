@@ -81,6 +81,7 @@ public class ModuleJarLoader {
                 // 是否有模块加载成功
                 boolean hasModuleLoadedSuccessFlag = false;
 
+                // 模块jar加载回调
                 if (null != mjCb) {
                     mjCb.onLoad(moduleJarFile);
                 }
@@ -88,6 +89,7 @@ public class ModuleJarLoader {
                 // 模块ClassLoader
                 moduleClassLoader = new ModuleClassLoader(moduleJarFile, sandboxClassLoader);
 
+                // 将每个jar中Module接口的子类都加载出来
                 final ServiceLoader<Module> moduleServiceLoader = ServiceLoader.load(Module.class, moduleClassLoader);
                 final Iterator<Module> moduleIt = moduleServiceLoader.iterator();
                 while (moduleIt.hasNext()) {
@@ -102,11 +104,13 @@ public class ModuleJarLoader {
 
                     final Class<?> classOfModule = module.getClass();
 
+                    // Module实现类是否有@Information注解
                     if (!classOfModule.isAnnotationPresent(Information.class)) {
                         logger.info("{} was not implements @Information, ignore this SPI.", classOfModule);
                         continue;
                     }
 
+                    // 解析注解上的属性值
                     final Information info = classOfModule.getAnnotation(Information.class);
                     if (StringUtils.isBlank(info.id())) {
                         logger.info("{} was not implements @Information[id], ignore this SPI.", classOfModule);
@@ -120,6 +124,7 @@ public class ModuleJarLoader {
                         continue;
                     }
 
+                    // 模块加载回调
                     try {
                         if (null != mCb) {
                             mCb.onLoad(

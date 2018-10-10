@@ -93,7 +93,7 @@ public class GaStringUtils {
     }
 
     /**
-     * Internal matching recursive function.
+     * 内匹配递归函数
      */
     private static boolean matching(String string, String wildcard, int stringStartNdx, int patternStartNdx) {
         int pNdx = patternStartNdx;

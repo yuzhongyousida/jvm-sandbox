@@ -11,7 +11,7 @@ import java.util.Collection;
 
 /**
  * 可路由的URLClassLoader
- *
+ * 就是提供对某些类的缓存功能
  * @author luanjia@taobao.com
  */
 public class RoutingURLClassLoader extends URLClassLoader {

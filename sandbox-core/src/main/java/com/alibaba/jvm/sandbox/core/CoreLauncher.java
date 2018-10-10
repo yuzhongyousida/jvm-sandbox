@@ -24,7 +24,8 @@ public class CoreLauncher {
 
     /**
      * 内核启动程序
-     *
+     * 整个命令类似于 java -jar sandbox-core.jar pid  /xxx/sandbox-agent.jar  home=xxx;token=xxx;ip=xxx;port=xxx;namespace=xxx
+     *                                         [0]         [1]                     [2]
      * @param args 参数
      *             [0] : PID
      *             [1] : agent.jar's value
@@ -49,15 +50,23 @@ public class CoreLauncher {
         }
     }
 
-    // 加载Agent
+    /**
+     * 加载Agent（实质就是：利用VirtualMachine类提供的方法进行Java进程之间的通信）
+     * @param targetJvmPid jvm pid
+     * @param agentJarPath sandbox-agent.jar的路径
+     * @param cfg 配置信息
+     * @throws Exception
+     */
     private void attachAgent(final String targetJvmPid,
                              final String agentJarPath,
                              final String cfg) throws Exception {
 
         VirtualMachine vmObj = null;
         try {
-
+            // 获取Java进程对应的VM
             vmObj = VirtualMachine.attach(targetJvmPid);
+
+            // 向对应的VM中加载agent
             if(vmObj!=null){
                 vmObj.loadAgent(agentJarPath,cfg);
             }

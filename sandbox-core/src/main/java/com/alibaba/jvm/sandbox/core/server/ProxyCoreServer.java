@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.net.InetSocketAddress;
 
+/**
+ * 内核服务器代理
+ */
 public class ProxyCoreServer implements CoreServer {
 
     private final static Class<? extends CoreServer> classOfCoreServerImpl

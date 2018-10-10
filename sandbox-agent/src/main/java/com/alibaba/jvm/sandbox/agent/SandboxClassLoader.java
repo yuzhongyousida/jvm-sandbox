@@ -19,30 +19,40 @@ class SandboxClassLoader extends URLClassLoader {
 
     SandboxClassLoader(final String namespace,
                        final String sandboxCoreJarFilePath) throws MalformedURLException {
+        // 父类URLClassLoader的构造器
         super(new URL[]{new URL("file:" + sandboxCoreJarFilePath)});
+
+        // 属性赋值
         this.namespace = namespace;
         this.path = sandboxCoreJarFilePath;
     }
 
+    /**
+     * 重写loadClass方法(实现破坏双亲委派)
+     * @param name
+     * @param resolve
+     * @return
+     * @throws ClassNotFoundException
+     */
     @Override
     protected synchronized Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+        // 先从已加载的类中搜寻
         final Class<?> loadedClass = findLoadedClass(name);
         if (loadedClass != null) {
             return loadedClass;
         }
 
-//        // 优先从parent（SystemClassLoader）里加载系统类，避免抛出ClassNotFoundException
-//        if(name != null && (name.startsWith("sun.") || name.startsWith("java."))) {
-//            return super.loadClass(name, resolve);
-//        }
-
         try {
+            // 直接从自身加载器中查找类，而不是给父加载器
             Class<?> aClass = findClass(name);
+
+            // 连接指定类（todo 需要调研类加载过程中，为什么需要进行类连接）resolve一般是false
             if (resolve) {
                 resolveClass(aClass);
             }
             return aClass;
         } catch (Exception e) {
+            // 异常的时候从父加载器中查找
             return super.loadClass(name, resolve);
         }
     }
@@ -85,8 +95,7 @@ class SandboxClassLoader extends URLClassLoader {
             final Object sun_misc_URLClassPath = URLClassLoader.class.getDeclaredField("ucp").get(this);
             final Object java_util_Collection = sun_misc_URLClassPath.getClass().getDeclaredField("loaders").get(sun_misc_URLClassPath);
 
-            for (Object sun_misc_URLClassPath_JarLoader :
-                    ((Collection) java_util_Collection).toArray()) {
+            for (Object sun_misc_URLClassPath_JarLoader : ((Collection) java_util_Collection).toArray()) {
                 try {
                     final JarFile java_util_jar_JarFile = (JarFile) sun_misc_URLClassPath_JarLoader.getClass().getDeclaredField("jar").get(sun_misc_URLClassPath_JarLoader);
                     java_util_jar_JarFile.close();

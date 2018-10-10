@@ -59,6 +59,16 @@ public class SandboxClassFileTransformer implements ClassFileTransformer {
                 : createClassStructure(classBeingRedefined);
     }
 
+    /**
+     * ClassFileTransformer接口的转换方法实现
+     * @param loader
+     * @param internalClassName
+     * @param classBeingRedefined
+     * @param protectionDomain
+     * @param srcByteCodeArray
+     * @return
+     * @throws IllegalClassFormatException
+     */
     @Override
     public byte[] transform(final ClassLoader loader,
                             final String internalClassName,
@@ -110,6 +120,7 @@ public class SandboxClassFileTransformer implements ClassFileTransformer {
             return null;
         }
 
+        // 获取当前类构造器
         final ClassStructure classStructure = getClassStructure(loader, classBeingRedefined, srcByteCodeArray);
         final MatchingResult matchingResult = new UnsupportedMatcher(loader, isEnableUnsafe).and(matcher).matching(classStructure);
         final Set<String> behaviorSignCodes = matchingResult.getBehaviorSignCodes();

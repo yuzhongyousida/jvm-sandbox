@@ -65,9 +65,12 @@ class AdviceAdapterListener implements EventListener {
                     top = parent.getProcessTop();
                 }
 
+                // 应用before:级联顶层通知，级联下一个通知
                 advice.applyBefore(top, parent);
 
                 opStackRef.get().pushForBegin(advice);
+
+                // 执行listener的before逻辑
                 adviceListener.before(advice);
                 break;
             }

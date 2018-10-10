@@ -101,22 +101,32 @@ public class ModuleHttpServlet extends HttpServlet {
 
         final PrintWriter writer = resp.getWriter();
 
-        // 调用方法
+        // 添加本次对模块的访问资源
         moduleResourceManager.append(uniqueId,
                 new ModuleResourceManager.WeakResource<PrintWriter>(writer) {
-
                     @Override
                     public void release() {
                         IOUtils.closeQuietly(get());
                     }
 
                 });
+
+        // 方法的原本访问域
         final boolean isAccessible = method.isAccessible();
+
+        // 当前线程原本的context ClassLoader
         final ClassLoader oriThreadContextClassLoader = Thread.currentThread().getContextClassLoader();
+
         try {
+            // 打开方法访问域
             method.setAccessible(true);
+
+            // 将该module的classLoader设置成context ClassLoader
             Thread.currentThread().setContextClassLoader(coreModule.getLoader());
+
+            // 执行方法
             method.invoke(coreModule.getModule(), parameterObjectArray);
+
             logger.debug("http request value={} invoke module[id={};] {}#{} success.",
                     path, uniqueId, coreModule.getModule().getClass(), method.getName());
         } catch (IllegalAccessException iae) {
@@ -135,8 +145,13 @@ public class ModuleHttpServlet extends HttpServlet {
             }
             throw new ServletException(targetCause);
         } finally {
+            // 还原当前线程的context ClassLoader
             Thread.currentThread().setContextClassLoader(oriThreadContextClassLoader);
+
+            // 还原当前方法的访问域
             method.setAccessible(isAccessible);
+
+            // 释放本次对module访问的资源
             moduleResourceManager.remove(uniqueId, writer);
         }
 
@@ -173,12 +188,13 @@ public class ModuleHttpServlet extends HttpServlet {
                                         final String uniqueId,
                                         final Class<?> classOfModule) {
 
+        // 取出并循环所有有@Http注解的方法
         for (final Method method : MethodUtils.getMethodsListWithAnnotation(classOfModule, Http.class)) {
             final Http httpAnnotation = method.getAnnotation(Http.class);
             if(null == httpAnnotation) {
                 continue;
             }
-            final String pathPattern = "/"+uniqueId+httpAnnotation.value();
+            final String pathPattern = "/" + uniqueId + httpAnnotation.value();
             if (ArrayUtils.contains(httpAnnotation.method(), httpMethod)
                     && matching(path, pathPattern)) {
                 return method;

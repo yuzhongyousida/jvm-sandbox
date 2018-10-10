@@ -38,7 +38,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher, ModuleLife
     private final CoreModule coreModule;
     private final boolean isEnableUnsafe;
 
-    // 观察ID序列生成器
+    // 观察ID序列生成器（从1000起步）
     private final Sequencer watchIdSequencer = new Sequencer(1000);
 
     DefaultModuleEventWatcher(final Instrumentation inst,
@@ -175,6 +175,15 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher, ModuleLife
         return watch(new ExtFilterMatcher(make(filter)), listener, progress, eventType);
     }
 
+    /**
+     * 观察事件
+     * @param condition 事件观察条件，只有符合条件的类/方法才会被观察
+     * @param listener  事件监听器
+     *                  观察到的事件将会告知此事件监听器
+     * @param progress  观察渲染进度报告
+     * @param eventType 观察事件类型
+     * @return
+     */
     @Override
     public int watch(final EventWatchCondition condition,
                      final EventListener listener,
@@ -189,6 +198,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher, ModuleLife
                       final Progress progress,
                       final Event.Type... eventType) {
         final int watchId = watchIdSequencer.next();
+
         // 给对应的模块追加ClassFileTransformer
         final SandboxClassFileTransformer sandClassFileTransformer = new SandboxClassFileTransformer(
                 watchId, coreModule.getUniqueId(), matcher, listener, isEnableUnsafe, eventType);
@@ -206,7 +216,7 @@ public class DefaultModuleEventWatcher implements ModuleEventWatcher, ModuleLife
 
         int cCnt = 0, mCnt = 0;
 
-        // 进度通知启动
+        // 进度通知启动（一般而言，progress是空）
         beginProgress(progress, waitingReTransformClasses.size());
         try {
 

@@ -40,6 +40,11 @@ public abstract class GroupMatcher implements Matcher {
             super(matcherArray);
         }
 
+        /**
+         * 过滤类和类行为
+         * @param classStructure 类结构
+         * @return
+         */
         @Override
         public MatchingResult matching(ClassStructure classStructure) {
             boolean isFirst = true;
@@ -57,9 +62,11 @@ public abstract class GroupMatcher implements Matcher {
                 }
 
                 if (isFirst) {
+                    // 取并集
                     found.addAll(subResult.getBehaviorStructures());
                     isFirst = false;
                 } else {
+                    // 取交集（found最后剩下交集的部分）
                     found.retainAll(subResult.getBehaviorStructures());
                 }
             }

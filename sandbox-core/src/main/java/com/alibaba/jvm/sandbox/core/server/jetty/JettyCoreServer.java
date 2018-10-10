@@ -41,9 +41,16 @@ public class JettyCoreServer implements CoreServer {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final Initializer initializer = new Initializer(true);
 
+    // jetty的Serer实例
     private Server httpServer;
+
+    // 核心配置
     private CoreConfigure cfg;
+
+    // 模块资源管理类实例
     private ModuleResourceManager moduleResourceManager;
+
+    // 核心模块管理类实例
     private CoreModuleManager coreModuleManager;
 
     /**
@@ -143,7 +150,10 @@ public class JettyCoreServer implements CoreServer {
         httpServer.setHandler(context);
     }
 
-    // 初始化Logback日志配置
+    /**
+     * 初始化Logback日志配置
+     * @param cfg
+     */
     private void initLogback(final CoreConfigure cfg) {
         final LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         final JoranConfigurator configurator = new JoranConfigurator();
@@ -162,6 +172,10 @@ public class JettyCoreServer implements CoreServer {
         }
     }
 
+    /**
+     * 初始化HttpServer
+     * @param cfg
+     */
     private void initHttpServer(final CoreConfigure cfg) {
 
         // 如果IP:PORT已经被占用，则无法继续被绑定
@@ -180,7 +194,11 @@ public class JettyCoreServer implements CoreServer {
         }
     }
 
-    // 初始化各种manager
+    /**
+     * 初始化各种manager
+     * @param inst
+     * @param cfg
+     */
     private void initManager(final Instrumentation inst,
                              final CoreConfigure cfg) {
 
@@ -188,9 +206,11 @@ public class JettyCoreServer implements CoreServer {
 
         logger.info("init manager success. manager={}", EventListenerHandlers.getSingleton());
 
+        // 默认模块生命周期总线
         final ModuleLifeCycleEventBus moduleLifeCycleEventBus = new DefaultModuleLifeCycleEventBus();
         logger.info("init manager success. manager={}", moduleLifeCycleEventBus);
 
+        // 已加载类数据源默认实现
         final CoreLoadedClassDataSource classDataSource = new DefaultLoadedClassDataSource(inst, cfg);
         logger.info("init manager success. manager={}", classDataSource);
 
@@ -198,11 +218,11 @@ public class JettyCoreServer implements CoreServer {
         moduleLifeCycleEventBus.append(moduleResourceManager = new DefaultModuleResourceManager());
         logger.info("init manager success. manager={}", moduleResourceManager);
 
-        // 初始化服务管理器
+        // 初始化服务管理器（模块jar加载Chain, 模块加载Chain）
         final ProviderManager providerManager = new DefaultProviderManager(cfg, sandboxClassLoader);
         logger.info("init manager success. manager={}", providerManager);
 
-        // 初始化模块管理器
+        // 初始化模块管理器（所有模块和模块jar的加载）
         coreModuleManager = new DefaultCoreModuleManager(
                 inst, classDataSource, cfg, sandboxClassLoader, moduleLifeCycleEventBus, providerManager
         );
@@ -216,15 +236,27 @@ public class JettyCoreServer implements CoreServer {
             initializer.initProcess(new Initializer.Processor() {
                 @Override
                 public void process() throws Throwable {
+                    // 给JettyCoreServer实例赋配置属性值
                     JettyCoreServer.this.cfg = cfg;
                     logger.info("cfg={}", cfg);
+
+                    // 初始化logback日志配置
                     initLogback(cfg);
+
+                    // 初始化各种manager
                     initManager(inst, cfg);
+
+                    // 初始化HttpServer
                     initHttpServer(cfg);
+
+                    // 初始化Jetty的ContextHandler
                     initJettyContextHandler(cfg);
+
+                    // 开启
                     httpServer.start();
                 }
             });
+
             final InetSocketAddress local = getLocal();
             logger.info("init httpSrv success. bind to {}:{}", local.getHostName(), local.getPort());
         } catch (Throwable cause) {

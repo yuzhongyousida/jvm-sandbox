@@ -21,6 +21,13 @@ public class DefaultModuleResourceManager implements ModuleResourceManager, Modu
     private final Map<String, List<WeakResource<?>>> moduleResourceListMapping
             = new HashMap<String, List<WeakResource<?>>>();
 
+    /**
+     * 追加模块
+     * @param uniqueId 模块ID
+     * @param resource 可释放资源封装
+     * @param <T>
+     * @return
+     */
     @Override
     public synchronized <T> T append(String uniqueId, WeakResource<T> resource) {
         if (null == resource
@@ -39,6 +46,12 @@ public class DefaultModuleResourceManager implements ModuleResourceManager, Modu
         return resource.get();
     }
 
+    /**
+     * 移除模块
+     * @param uniqueId 模块ID
+     * @param target   待释放的资源实体
+     * @param <T>
+     */
     @Override
     public <T> void remove(String uniqueId, T target) {
         if (null == target) {
@@ -75,6 +88,12 @@ public class DefaultModuleResourceManager implements ModuleResourceManager, Modu
         }//sync
     }
 
+    /**
+     * 卸载模块
+     * @param coreModule 被通知的沙箱模块
+     * @param event      通知事件类型
+     * @return
+     */
     @Override
     public boolean onFire(CoreModule coreModule, ModuleLifeCycleEventBus.Event event) {
 
@@ -83,6 +102,7 @@ public class DefaultModuleResourceManager implements ModuleResourceManager, Modu
             return true;
         }
 
+        // 从模块资源列表中移除
         final String uniqueId = coreModule.getUniqueId();
         final List<WeakResource<?>> moduleResourceList;
         synchronized (this) {
@@ -95,6 +115,7 @@ public class DefaultModuleResourceManager implements ModuleResourceManager, Modu
             logger.info("module[id={};] is unloading, will release {} resources.", uniqueId, moduleResourceList.size());
         }
 
+        // 被移除的模块，执行自身后续的release操作（关闭流等等。。）
         for (final WeakResource<?> resource : moduleResourceList) {
             if (null == resource
                     || null == resource.get()) {

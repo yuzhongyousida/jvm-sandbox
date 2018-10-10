@@ -43,8 +43,12 @@ public class DefaultProviderManager implements ProviderManager {
         }
     }
 
-    private void init(final CoreConfigure cfg,
-                      final ClassLoader sandboxClassLoader) {
+    /**
+     * provider jar中接口实现类的实例加载和属性赋值等初始化操作
+     * @param cfg
+     * @param sandboxClassLoader
+     */
+    private void init(final CoreConfigure cfg, final ClassLoader sandboxClassLoader) {
         final File providerLibDir = new File(cfg.getProviderLibPath());
         if (!providerLibDir.exists()
                 || !providerLibDir.canRead()) {
@@ -55,12 +59,13 @@ public class DefaultProviderManager implements ProviderManager {
         for (final File providerJarFile : FileUtils.listFiles(providerLibDir, new String[]{"jar"}, false)) {
 
             try {
+                // RoutingURLClassLoader实例（将sandbox-provider.jar加载进来）
                 final ProviderClassLoader providerClassLoader = new ProviderClassLoader(providerJarFile, sandboxClassLoader);
 
-                // load ModuleJarLoadingChain
+                // load ModuleJarLoadingChain接口实现类实例，并给其配置属性赋值
                 inject(moduleJarLoadingChains, ModuleJarLoadingChain.class, providerClassLoader, providerJarFile);
 
-                // load ModuleLoadingChain
+                // load ModuleLoadingChain接口实现类实例，并给其配置属性赋值
                 inject(moduleLoadingChains, ModuleLoadingChain.class, providerClassLoader, providerJarFile);
 
                 logger.info("loading provider-jar[{}] was success.", providerJarFile);
@@ -74,13 +79,28 @@ public class DefaultProviderManager implements ProviderManager {
 
     }
 
+    /**
+     * 加载clazz接口的所有实现类，并给其属性赋值
+     * @param collection
+     * @param clazz
+     * @param providerClassLoader
+     * @param providerJarFile
+     * @param <T>
+     * @throws IllegalAccessException
+     */
     private <T> void inject(final Collection<T> collection,
                             final Class<T> clazz,
                             final ClassLoader providerClassLoader,
                             final File providerJarFile) throws IllegalAccessException {
+        // 用指定的接口类型和classLoader生成新的ServiceLoader列表（ServiceLoader列表中每个实例都装这接口类型的实现类）
         final ServiceLoader<T> serviceLoader = ServiceLoader.load(clazz, providerClassLoader);
+
+        // 将所有clazz接口实现类都注入
         for (final T provider : serviceLoader) {
+            // 利用反射，给clazz接口实现类中的ConfigInfo类型属性赋值
             injectResource(provider);
+
+            // 装载进集合
             collection.add(provider);
             logger.info("loading provider[{}] was success from provider-jar[{}], impl={}",
                     clazz.getName(), providerJarFile, provider.getClass().getName());

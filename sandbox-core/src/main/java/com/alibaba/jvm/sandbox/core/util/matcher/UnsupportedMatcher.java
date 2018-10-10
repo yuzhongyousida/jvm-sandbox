@@ -57,7 +57,7 @@ public class UnsupportedMatcher implements Matcher {
     }
 
     /*
-     * 判断是否隐形类
+     * 判断是否隐形类（有@Stealth注解的类）
      */
     private boolean isStealthClass(final ClassStructure classStructure) {
         return takeJavaClassNames(classStructure.getFamilyTypeClassStructures())
@@ -105,15 +105,18 @@ public class UnsupportedMatcher implements Matcher {
     @Override
     public MatchingResult matching(final ClassStructure classStructure) {
         final MatchingResult result = new MatchingResult();
+
+        // 类匹配：jvm不可修改类、jvmsandbox本身类、自身有@Stealth隐形基因的类、父类中有@Stealth隐形基因的类都不在匹配范围内
         if (isUnsupportedClass(classStructure)
                 || isJvmSandboxClass(classStructure)
                 || isFromStealthClassLoader()
                 || isStealthClass(classStructure)) {
             return result;
         }
+
+        // 行为匹配：main方法、abstract方法、native方法都不在匹配范围
         for (final BehaviorStructure behaviorStructure : classStructure.getBehaviorStructures()) {
-            if (isJavaMainBehavior(behaviorStructure)
-                    || isUnsupportedBehavior(behaviorStructure)) {
+            if (isJavaMainBehavior(behaviorStructure) || isUnsupportedBehavior(behaviorStructure)) {
                 continue;
             }
             result.getBehaviorStructures().add(behaviorStructure);

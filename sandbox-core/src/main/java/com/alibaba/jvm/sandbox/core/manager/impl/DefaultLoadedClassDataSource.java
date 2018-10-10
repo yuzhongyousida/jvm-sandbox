@@ -5,6 +5,7 @@ import com.alibaba.jvm.sandbox.core.CoreConfigure;
 import com.alibaba.jvm.sandbox.core.manager.CoreLoadedClassDataSource;
 import com.alibaba.jvm.sandbox.core.util.matcher.ExtFilterMatcher;
 import com.alibaba.jvm.sandbox.core.util.matcher.Matcher;
+import com.alibaba.jvm.sandbox.core.util.matcher.MatchingResult;
 import com.alibaba.jvm.sandbox.core.util.matcher.UnsupportedMatcher;
 import com.alibaba.jvm.sandbox.core.util.matcher.structure.ClassStructureFactory;
 import org.slf4j.Logger;
@@ -44,7 +45,7 @@ public class DefaultLoadedClassDataSource implements CoreLoadedClassDataSource {
     @Override
     public Iterator<Class<?>> iteratorForLoadedClasses() {
         return new Iterator<Class<?>>() {
-
+            // 获取jvm 当前加载的所有类的数组
             final Class<?>[] loaded = inst.getAllLoadedClasses();
             int pos = 0;
 
@@ -66,6 +67,12 @@ public class DefaultLoadedClassDataSource implements CoreLoadedClassDataSource {
         };
     }
 
+    /**
+     * 使用{@link Matcher}来完成类的检索
+     * 本次检索将会用于Class型变，所以会主动过滤掉不支持的类和行为
+     * @param matcher 类匹配
+     * @return
+     */
     @Override
     public List<Class<?>> findForReTransform(final Matcher matcher) {
         return find(matcher, true);
@@ -78,21 +85,28 @@ public class DefaultLoadedClassDataSource implements CoreLoadedClassDataSource {
             return classes;
         }
 
+        // 取出jvm中当前加载的所有类的数组
         final Iterator<Class<?>> itForLoaded = iteratorForLoadedClasses();
+
+        // 循环找出和matcher匹配的类，同时过滤掉jvm任务不可修改的类
         while (itForLoaded.hasNext()) {
             final Class<?> clazz = itForLoaded.next();
+
             // 过滤掉对于JVM认为不可修改的类
-            if (isRemoveUnsupported
-                    && !inst.isModifiableClass(clazz)) {
+            if (isRemoveUnsupported && !inst.isModifiableClass(clazz)) {
                 logger.debug("remove from findForReTransform, because class:{} is unModifiable", clazz.getName());
                 continue;
             }
+
             try {
                 if (isRemoveUnsupported) {
-                    if (new UnsupportedMatcher(clazz.getClassLoader(), cfg.isEnableUnsafe())
-                            .and(matcher)
-                            .matching(ClassStructureFactory.createClassStructure(clazz))
-                            .isMatched()) {
+                    // 检查当前class是否有类和类行为有不匹配的地方
+                    UnsupportedMatcher unsupportedMatcher = new UnsupportedMatcher(clazz.getClassLoader(), cfg.isEnableUnsafe());
+                    unsupportedMatcher.and(matcher);
+                    MatchingResult matchingResult = unsupportedMatcher.matching(ClassStructureFactory.createClassStructure(clazz));
+
+                    // 若通过检测，则加入结果集
+                    if (matchingResult.isMatched()) {
                         classes.add(clazz);
                     }
                 } else {

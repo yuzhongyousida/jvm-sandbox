@@ -23,64 +23,76 @@ import static java.lang.String.format;
  */
 public class AgentLauncher {
 
-//    // sandbox配置文件目录
-//    private static final String SANDBOX_CFG_PATH
-//            = SANDBOX_HOME + File.separatorChar + "cfg";
-//
-//    // 模块目录
-//    private static final String SANDBOX_MODULE_PATH
-//            = SANDBOX_HOME + File.separatorChar + "module";
-//
-//
-//    // sandbox核心工程文件
-//    private static final String SANDBOX_CORE_JAR_PATH
-//            = SANDBOX_HOME + File.separatorChar + "lib" + File.separator + "sandbox-core.jar";
-//
-//    // sandbox-spy工程文件
-//    private static final String SANDBOX_SPY_JAR_PATH
-//            = SANDBOX_HOME + File.separatorChar + "lib" + File.separator + "sandbox-spy.jar";
-//
-//    private static final String SANDBOX_PROPERTIES_PATH
-//            = SANDBOX_CFG_PATH + File.separator + "sandbox.properties";
-//
-//    // sandbox-provider库目录
-//    private static final String SANDBOX_PROVIDER_LIB_PATH
-//            = SANDBOX_HOME + File.separatorChar + "provider";
-
-
+    /**
+     * 配置文件路径
+     * @param sandboxHome
+     * @return
+     */
     private static String getSandboxCfgPath(String sandboxHome) {
         return sandboxHome + File.separatorChar + "cfg";
     }
 
+    /**
+     * sandboxModule路径
+     * @param sandboxHome
+     * @return
+     */
     private static String getSandboxModulePath(String sandboxHome) {
         return sandboxHome + File.separatorChar + "module";
     }
 
+    /**
+     * sandbox-core路径
+     * @param sandboxHome
+     * @return
+     */
     private static String getSandboxCoreJarPath(String sandboxHome) {
         return sandboxHome + File.separatorChar + "lib" + File.separator + "sandbox-core.jar";
     }
 
+    /**
+     * sandbox spay jar路径
+     * @param sandboxHome
+     * @return
+     */
     private static String getSandboxSpyJarPath(String sandboxHome) {
         return sandboxHome + File.separatorChar + "lib" + File.separator + "sandbox-spy.jar";
     }
 
+    /**
+     * sandbox配置文件路径
+     * @param sandboxHome
+     * @return
+     */
     private static String getSandboxPropertiesPath(String sandboxHome) {
         return getSandboxCfgPath(sandboxHome) + File.separator + "sandbox.properties";
     }
 
+    /**
+     * provider 路径
+     * @param sandboxHome
+     * @return
+     */
     private static String getSandboxProviderPath(String sandboxHome) {
         return sandboxHome + File.separatorChar + "provider";
     }
 
-    //
+    /**
+     * sandbox home路径
+     */
     private static final String SANDBOX_HOME = File.separator + "data" + File.separator + "appdatas"+ File.separator + "sandbox";
 
-    // sandbox默认主目录
+    /**
+     * sandbox home默认主目录
+     */
     private static final String DEFAULT_SANDBOX_HOME
             = new File(AgentLauncher.class.getProtectionDomain().getCodeSource().getLocation().getFile())
             .getParentFile()
             .getParent();
 
+    /**
+     * sandbox user-module路径
+     */
     private static final String SANDBOX_USER_MODULE_PATH
             = SANDBOX_HOME + File.separator + "user-module";
 
@@ -96,35 +108,45 @@ public class AgentLauncher {
     // agentmain上来的结果输出到文件/data/appdatas/sandbox/.sandbox.token
     private static final String RESULT_FILE_PATH = SANDBOX_HOME + File.separator + ".sandbox.token";
 
-    // 全局持有ClassLoader用于隔离sandbox实现
-    private static volatile Map<String/*NAMESPACE*/, SandboxClassLoader> sandboxClassLoaderMap
-            = new ConcurrentHashMap<String, SandboxClassLoader>();
+    /**
+     * 全局持有ClassLoader用于隔离sandbox实现（key:nameSpace, value:自定义SandboxClassLoader）
+     */
+    private static volatile Map<String, SandboxClassLoader> sandboxClassLoaderMap = new ConcurrentHashMap<String, SandboxClassLoader>();
 
+    /**
+     * 内核启动配置类包路径
+     */
     private static final String CLASS_OF_CORE_CONFIGURE = "com.alibaba.jvm.sandbox.core.CoreConfigure";
+
     // private static final String CLASS_OF_JETTY_CORE_SERVER = "com.alibaba.jvm.sandbox.core.server.jetty.JettyCoreServer";
+    /**
+     * 通信代理类包路径
+     */
     private static final String CLASS_OF_PROXY_CORE_SERVER = "com.alibaba.jvm.sandbox.core.server.ProxyCoreServer";
 
 
     /**
      * 启动加载
-     *
+     * agent方式启动（jvm参数配置中）
      * @param featureString 启动参数
      *                      [namespace,prop]
      * @param inst          inst
      */
     public static void premain(String featureString, Instrumentation inst) {
+        // 启动方式：agent
         LAUNCH_MODE = LAUNCH_MODE_AGENT;
         main(toFeatureMap(featureString), inst);
     }
 
     /**
      * 动态加载
-     *
+     * attach方式启动
      * @param featureString 启动参数
      *                      [namespace,token,ip,port,prop]
      * @param inst          inst
      */
     public static void agentmain(String featureString, Instrumentation inst) {
+        // 启动方式attach
         LAUNCH_MODE = LAUNCH_MODE_ATTACH;
         final Map<String, String> featureMap = toFeatureMap(featureString);
         writeAttachResult(
@@ -183,16 +205,16 @@ public class AgentLauncher {
 
     private static synchronized ClassLoader loadOrDefineClassLoader(final String namespace,
                                                                     final String coreJar) throws Throwable {
-
+        // 自定义classLoader
         final SandboxClassLoader classLoader;
 
-        // 如果已经被启动则返回之前启动的ClassLoader
+        // 若已生成过，则直接获取返回
         if (sandboxClassLoaderMap.containsKey(namespace)
                 && null != sandboxClassLoaderMap.get(namespace)) {
             classLoader = sandboxClassLoaderMap.get(namespace);
         }
 
-        // 如果未启动则重新加载
+        // 如果未生成过，则新生成一个
         else {
             classLoader = new SandboxClassLoader(namespace, coreJar);
             sandboxClassLoaderMap.put(namespace, classLoader);
@@ -237,47 +259,51 @@ public class AgentLauncher {
     private static synchronized InetSocketAddress main(final Map<String, String> featureMap,
                                                        final Instrumentation inst) {
 
+        // namespace
         final String namespace = getNamespace(featureMap);
+
+        // 配置文件路径
         final String propertiesFilePath = getPropertiesFilePath(featureMap);
+
+        // 核心配置拼装的字符串
         final String coreFeatureString = toFeatureString(featureMap);
 
         try {
+            // spay jar的路径
+            String sandboxSpyJarPath = getSandboxSpyJarPath(getSandboxHome(featureMap));
 
-            // 将Spy注入到BootstrapClassLoader
-            inst.appendToBootstrapClassLoaderSearch(new JarFile(new File(
-                    getSandboxSpyJarPath(getSandboxHome(featureMap))
-                    // SANDBOX_SPY_JAR_PATH
-            )));
+            // 将Spy注入到BootstrapClassLoader（BootClassPath的动态增补）
+            inst.appendToBootstrapClassLoaderSearch(new JarFile(new File(sandboxSpyJarPath)));
 
-            // 构造自定义的类加载器，尽量减少Sandbox对现有工程的侵蚀
-            final ClassLoader agentLoader = loadOrDefineClassLoader(
-                    namespace,
-                    getSandboxCoreJarPath(getSandboxHome(featureMap))
-                    // SANDBOX_CORE_JAR_PATH
-            );
+            // sandbox-core jar包的路径
+            String sandboxCoreJarPath = getSandboxCoreJarPath(getSandboxHome(featureMap));
 
-            // CoreConfigure类定义
+            // 构造自定义的类加载器，尽量减少Sandbox对现有工程的侵蚀（将sandbox-core.jar给加载到自定义加载器）
+            final ClassLoader agentLoader = loadOrDefineClassLoader(namespace, sandboxCoreJarPath);
+
+            // 获取配置解析类（com.alibaba.jvm.sandbox.core.CoreConfigure）
             final Class<?> classOfConfigure = agentLoader.loadClass(CLASS_OF_CORE_CONFIGURE);
 
-            // 反序列化成CoreConfigure类实例
+            // 调用CoreConfigure类的toConfigure static方法，将字符串配置解析成配置对象
             final Object objectOfCoreConfigure = classOfConfigure.getMethod("toConfigure", String.class, String.class)
                     .invoke(null, coreFeatureString, propertiesFilePath);
 
-            // CoreServer类定义
+            // 获取内核服务代理类（com.alibaba.jvm.sandbox.core.server.ProxyCoreServer）
             final Class<?> classOfProxyServer = agentLoader.loadClass(CLASS_OF_PROXY_CORE_SERVER);
 
-            // 获取CoreServer单例
+            // 获取JettyCoreServer实例（单例）
             final Object objectOfCoreServer = classOfProxyServer
                     .getMethod("getInstance")
                     .invoke(null);
 
-            // CoreServer.isBind()
+            // 校验通信是否已绑定 JettyCoreServer.isBind()
             final boolean isBind = (Boolean) classOfProxyServer.getMethod("isBind").invoke(objectOfCoreServer);
 
 
             // 如果未绑定,则需要绑定一个地址
             if (!isBind) {
                 try {
+                    // proxyCoreServer.bind() 实例调用，非static方法
                     classOfProxyServer
                             .getMethod("bind", classOfConfigure, Instrumentation.class)
                             .invoke(objectOfCoreServer, objectOfCoreConfigure, inst);
@@ -374,22 +400,38 @@ public class AgentLauncher {
                 : defaultValue;
     }
 
-    // 获取主目录
+    /**
+     * 获取配置中的主目录
+     * @param featureMap
+     * @return
+     */
     private static String getSandboxHome(final Map<String, String> featureMap) {
         return getDefault(featureMap, KEY_SANDBOX_HOME, DEFAULT_SANDBOX_HOME);
     }
 
-    // 获取命名空间
+    /**
+     * 获取配置中的命名空间
+     * @param featureMap
+     * @return
+     */
     private static String getNamespace(final Map<String, String> featureMap) {
         return getDefault(featureMap, KEY_NAMESPACE, DEFAULT_NAMESPACE);
     }
 
-    // 获取TOKEN
+    /**
+     * 获取配置中的KEY_TOKEN文件
+     * @param featureMap
+     * @return
+     */
     private static String getToken(final Map<String, String> featureMap) {
         return getDefault(featureMap, KEY_TOKEN, DEFAULT_TOKEN);
     }
 
-    // 获取容器配置文件路径
+    /**
+     * 获取配置中的容器配置文件路径
+     * @param featureMap
+     * @return
+     */
     private static String getPropertiesFilePath(final Map<String, String> featureMap) {
         return getDefault(
                 featureMap,

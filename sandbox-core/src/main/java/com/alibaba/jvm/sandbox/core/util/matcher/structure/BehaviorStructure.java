@@ -29,6 +29,10 @@ public class BehaviorStructure extends MemberStructure {
     private final List<ClassStructure> annotationTypeClassStructures;
 
     private final LazyGet<String> signCodeLazyGet = new LazyGet<String>() {
+        /**
+         * 获取类方法字符串（格式：className#methodName(parameterType1, parameterType2...)）
+         * @return
+         */
         @Override
         protected String initialValue() {
             return String.format("%s#%s(%s)",
@@ -40,6 +44,10 @@ public class BehaviorStructure extends MemberStructure {
     };
 
     private final LazyGet<String> toStringLazyGet = new LazyGet<String>() {
+        /**
+         * 格式：returnType:[@annotation1,@annotation2...]:className#methodName(parameterType1, parameterType2...):ExceptionClass1,ExceptionClass2...
+         * @return
+         */
         @Override
         protected String initialValue() {
             return String.format("%s:[%s]:%s:%s",
